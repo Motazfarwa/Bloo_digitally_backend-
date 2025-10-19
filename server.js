@@ -72,13 +72,14 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
     // Send email using Nodemailer
     // --------------------------
     // Create transporter (use your SMTP server or Gmail)
-    const transporter = nodemailer.createTransport({
+     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "bloocareer680@gmail.com",       // replace with your email
-        pass: "tayn gdqp cslz ureo",          // Gmail app password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
+
 
     // Prepare attachments
     const attachments = req.files.map((file) => ({
