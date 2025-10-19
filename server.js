@@ -6,7 +6,14 @@ const Candidate = require("./models/condidate");
 const nodemailer = require('nodemailer');
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://bloo-digitaly-frontend.onrender.com",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // Multer setup for multiple files (memory storage)
