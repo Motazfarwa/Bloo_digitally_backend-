@@ -6,13 +6,28 @@ const Candidate = require("./models/condidate");
 const nodemailer = require('nodemailer');
 
 const app = express();
-app.use(
-  cors({
-    origin: "https://bloo-digitaly-frontend.onrender.com",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  })
-);
+// --------------------------
+// CORS Setup
+// --------------------------
+const allowedOrigins = ["https://bloo-digitaly-frontend.onrender.com"];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // allow requests with no origin (like Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+}));
+
+// Handle OPTIONS preflight requests for all routes
+app.options("*", cors());
+
 
 app.use(express.json());
 
