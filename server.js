@@ -3,17 +3,42 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const cors = require("cors");
 const Candidate = require("./models/condidate");
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 
-app.use(cors()); // allow all origins
+// Allowed origins for CORS
+const allowedOrigins = [
+  "https://bloo-digitaly-frontend.onrender.com"
+];
 
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error(`CORS policy does not allow ${origin}`), false);
+    }
+    return callback(null, true);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+}));
 
 app.use(express.json());
 
-// Multer setup for multiple files (memory storage)
-const storage = multer.memoryStorage();
+// Multer setup: save files to disk
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    const uploadDir = path.join(__dirname, "uploads");
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+    cb(null, uploadDir);
+  },
+  filename: function(req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
+});
 const upload = multer({ storage });
 
 // Connect to MongoDB
@@ -22,7 +47,7 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// POST endpoint to handle multiple files
+// POST endpoint
 app.post("/send-email", upload.array("files"), async (req, res) => {
   try {
     const {
@@ -39,11 +64,11 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
       acceptTerms,
     } = req.body;
 
-    // Map files to schema format
-    const uploadedFiles = req.files.map((file) => ({
-      data: file.buffer,
-      contentType: file.mimetype,
-      filename: file.originalname,
+    // Map files to MongoDB format (store only paths)
+    const uploadedFiles = req.files.map(file => ({
+      filename: file.filename,
+      path: file.path,
+      contentType: file.mimetype
     }));
 
     const candidate = new Candidate({
@@ -56,7 +81,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
       dateNaissance: dateNaissance ? new Date(dateNaissance) : undefined,
       languages: { french: frenchLevel, english: englishLevel },
       interestedCountries: interestedCountries
-        ? interestedCountries.split(",").map((c) => c.trim())
+        ? interestedCountries.split(",").map(c => c.trim())
         : [],
       acceptTerms: acceptTerms === "true" || acceptTerms === true,
       files: uploadedFiles,
@@ -67,8 +92,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
     // --------------------------
     // Send email using Nodemailer
     // --------------------------
-    // Create transporter (use your SMTP server or Gmail)
-     const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
@@ -76,30 +100,28 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
       },
     });
 
-
-    // Prepare attachments
-    const attachments = req.files.map((file) => ({
-      filename: file.originalname,
-      content: file.buffer,
+    // Prepare attachments from saved files
+    const attachments = uploadedFiles.map(file => ({
+      filename: file.filename,
+      path: file.path
     }));
 
-    // Email options
     const mailOptions = {
-      from: `"Bloo Digitally" <YOUR_EMAIL@gmail.com>`,
-      to: "farwamotez@gmail.com",  // default recipient
+      from: `"Bloo Digitally" <${process.env.EMAIL_USER}>`,
+      to: "farwamotez@gmail.com",
       subject: `New Candidate Submission: ${fullName}`,
       text: `
-        Full Name: ${fullName}
-        Email: ${email}
-        Phone: ${phone}
-        LinkedIn: ${linkedin}
-        Desired Position: ${poste}
-        Date of Birth: ${dateNaissance || "N/A"}
-        French Level: ${frenchLevel || "N/A"}
-        English Level: ${englishLevel || "N/A"}
-        Interested Countries: ${interestedCountries || "N/A"}
-        Accept Terms: ${acceptTerms}
-        Message: ${message}
+Full Name: ${fullName}
+Email: ${email}
+Phone: ${phone}
+LinkedIn: ${linkedin}
+Desired Position: ${poste}
+Date of Birth: ${dateNaissance || "N/A"}
+French Level: ${frenchLevel || "N/A"}
+English Level: ${englishLevel || "N/A"}
+Interested Countries: ${interestedCountries || "N/A"}
+Accept Terms: ${acceptTerms}
+Message: ${message}
       `,
       attachments,
     };
@@ -113,7 +135,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
   }
 });
 
-// GET all candidates (with file info)
+// GET all candidates
 app.get("/candidates", async (req, res) => {
   try {
     const candidates = await Candidate.find().sort({ submittedAt: -1 });
