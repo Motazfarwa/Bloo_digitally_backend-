@@ -93,12 +93,19 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
     // Send email using Nodemailer
     // --------------------------
     const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+     host: "smtp.gmail.com",
+     port: 587,        // TLS port
+     secure: false,    // false for TLS
+    auth: {
+     user: process.env.EMAIL_USER,
+     pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 10000 // optional
+  });
+
 
     // Prepare attachments from saved files
     const attachments = uploadedFiles.map(file => ({
