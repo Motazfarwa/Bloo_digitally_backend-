@@ -1,15 +1,24 @@
+// server.js
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const cors = require("cors");
-const Candidate = require("./models/condidate");
-const nodemailer = require("nodemailer");
-const path = require("path");
 const fs = require("fs");
+const path = require("path");
+const sgMail = require("@sendgrid/mail");
+const Candidate = require("./models/condidate");
 
 const app = express();
 
-// Allowed origins for CORS
+// --------------------------
+// Setup SendGrid
+// --------------------------
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// --------------------------
+// CORS setup
+// --------------------------
 const allowedOrigins = [
   "https://bloo-digitaly-frontend.onrender.com"
 ];
@@ -17,7 +26,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
+    if (!allowedOrigins.includes(origin)) {
       return callback(new Error(`CORS policy does not allow ${origin}`), false);
     }
     return callback(null, true);
@@ -28,7 +37,9 @@ app.use(cors({
 
 app.use(express.json());
 
-// Multer setup: save files to disk
+// --------------------------
+// Multer setup for uploads
+// --------------------------
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
     const uploadDir = path.join(__dirname, "uploads");
@@ -39,15 +50,31 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + "-" + file.originalname);
   }
 });
-const upload = multer({ storage });
 
-// Connect to MongoDB
+// Optional: restrict file types and size
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ["application/pdf", "image/png", "image/jpeg"];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error("File type not allowed"), false);
+    }
+    cb(null, true);
+  }
+});
+
+// --------------------------
+// MongoDB connection
+// --------------------------
 mongoose
-  .connect("mongodb+srv://bloo:bloo@cluster0.8pd4qvi.mongodb.net/")
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch(err => console.error("MongoDB connection error:", err));
 
-// POST endpoint
+// --------------------------
+// POST /send-email
+// --------------------------
 app.post("/send-email", upload.array("files"), async (req, res) => {
   try {
     const {
@@ -64,13 +91,14 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
       acceptTerms,
     } = req.body;
 
-    // Map files to MongoDB format (store only paths)
+    // Map uploaded files
     const uploadedFiles = req.files.map(file => ({
       filename: file.filename,
       path: file.path,
       contentType: file.mimetype
     }));
 
+    // Save candidate to MongoDB
     const candidate = new Candidate({
       fullName,
       email,
@@ -85,37 +113,23 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
         : [],
       acceptTerms: acceptTerms === "true" || acceptTerms === true,
       files: uploadedFiles,
+      submittedAt: new Date()
     });
 
     await candidate.save();
 
-    // --------------------------
-    // Send email using Nodemailer
-    // --------------------------
-    const transporter = nodemailer.createTransport({
-     host: "smtp.gmail.com",
-     port: 587,        // TLS port
-     secure: false,    // false for TLS
-    auth: {
-     user: process.env.EMAIL_USER,
-     pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 10000 // optional
-  });
-
-
-    // Prepare attachments from saved files
+    // Prepare attachments for SendGrid
     const attachments = uploadedFiles.map(file => ({
+      content: fs.readFileSync(file.path).toString("base64"),
       filename: file.filename,
-      path: file.path
+      type: file.contentType,
+      disposition: "attachment"
     }));
 
-    const mailOptions = {
-      from: `"Bloo Digitally" <${process.env.EMAIL_USER}>`,
+    // Send email via SendGrid
+    const msg = {
       to: "farwamotez@gmail.com",
+      from: "farwamotez@gmail.com", // Must be verified in SendGrid
       subject: `New Candidate Submission: ${fullName}`,
       text: `
 Full Name: ${fullName}
@@ -133,25 +147,33 @@ Message: ${message}
       attachments,
     };
 
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
 
     res.status(200).json({ message: "Candidate submitted and email sent successfully!", candidate });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to submit candidate.", error });
+    res.status(500).json({ message: "Failed to submit candidate.", error: error.message });
   }
 });
 
-// GET all candidates
+// --------------------------
+// GET /candidates
+// --------------------------
 app.get("/candidates", async (req, res) => {
   try {
     const candidates = await Candidate.find().sort({ submittedAt: -1 });
     res.status(200).json(candidates);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to fetch candidates.", error });
+    res.status(500).json({ message: "Failed to fetch candidates.", error: error.message });
   }
 });
 
-const PORT = 5000;
+// --------------------------
+// Serve uploaded files (optional)
+// --------------------------
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// --------------------------
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
