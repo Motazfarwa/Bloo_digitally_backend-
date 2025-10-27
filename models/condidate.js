@@ -8,16 +8,20 @@ const candidateSchema = new mongoose.Schema(
     linkedin: { type: String },
     message: { type: String },
 
+    // Store uploaded file info as path (not Buffer)
     files: [
       {
-        data: Buffer,
-        contentType: String,
-        filename: String,
+        filename: { type: String },
+        path: { type: String },
+        contentType: { type: String },
       },
     ],
 
     poste: { type: String },
-    languages: { french: String, english: String },
+    languages: { 
+      french: { type: String },
+      english: { type: String }
+    },
     interestedCountries: [{ type: String }],
     dateNaissance: { type: Date },
     acceptTerms: { type: Boolean, default: false },
