@@ -89,6 +89,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
       englishLevel,
       interestedCountries,
       acceptTerms,
+      service, 
     } = req.body;
 
     // Map uploaded files
@@ -112,6 +113,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
         ? interestedCountries.split(",").map(c => c.trim())
         : [],
       acceptTerms: acceptTerms === "true" || acceptTerms === true,
+      service, 
       files: uploadedFiles,
       submittedAt: new Date()
     });
@@ -132,6 +134,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
       from: "farwamotez@gmail.com", // Must be verified in SendGrid
       subject: `New Candidate Submission: ${fullName}`,
       text: `
+Service: ${service}     
 Full Name: ${fullName}
 Email: ${email}
 Phone: ${phone}
