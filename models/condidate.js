@@ -25,6 +25,14 @@ const candidateSchema = new mongoose.Schema(
     interestedCountries: [{ type: String }],
     dateNaissance: { type: Date },
     acceptTerms: { type: Boolean, default: false },
+
+    // ✅ New field added
+    service: { 
+      type: String,
+      enum: ["Job Search", "Study Abroad", "Volunteer Registration"], // optional validation
+      required: false, // set to true if you want to make it mandatory
+    },
+
     submittedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
