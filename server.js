@@ -130,7 +130,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
 
     // Send email via SendGrid
     const msg = {
-      to: "mootazfarwa23@gmail.com",
+      to: "farwamotez@gmail.com",
       from: "farwamotez@gmail.com", // Must be verified in SendGrid
       subject: `New Candidate Submission: ${fullName}`,
       text: `
