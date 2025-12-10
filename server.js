@@ -20,7 +20,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 // CORS setup
 // --------------------------
 const allowedOrigins = [
-  "https://bloo-digitaly-frontend.onrender.com"
+  "https://bloodigitally.com"
 ];
 
 app.use(cors({
