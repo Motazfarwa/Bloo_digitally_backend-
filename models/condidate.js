@@ -29,7 +29,7 @@ const candidateSchema = new mongoose.Schema(
     // ✅ New field added
     service: { 
       type: String,
-      enum: ["Job Search", "Study Abroad", "Volunteer Registration"], // optional validation
+      enum: ["Job Search", "Study Abroad", "Volunteer Registration", "Ausbildung"], // optional validation
       required: false, // set to true if you want to make it mandatory
     },
 
