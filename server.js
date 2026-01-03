@@ -27,7 +27,7 @@ apiInstance.setApiKey(
     testEmail.subject = "🚀 Server Started Successfully";
     testEmail.htmlContent = "<h1>✅ Brevo is working!</h1><p>Your backend is ready to receive applications.</p>";
     testEmail.sender = { name: "Blood Career", email: "farwamotez@gmail.com" };
-    testEmail.to = [{ email: "bloocareer680@gmail.com" }];
+    testEmail.to = [{ email: "bloocareer@gmail.com" }];
     
     await apiInstance.sendTransacEmail(testEmail);
     console.log('✅ Brevo email service is ready');
@@ -244,7 +244,7 @@ app.post("/send-email", upload.array("files"), async (req, res) => {
     };
     
     sendEmail.to = [
-      { email: "bloocareer680@gmail.com", name: "Blood Career Team" }
+      { email: "bloocareer@gmail.com", name: "Blood Career Team" }
     ];
     
     if (attachments.length > 0) {
@@ -316,14 +316,14 @@ app.get("/test-email", async (req, res) => {
     };
     
     testEmail.to = [
-      { email: "bloocareer680@gmail.com" }
+      { email: "bloocareer@gmail.com" }
     ];
 
     await apiInstance.sendTransacEmail(testEmail);
     
     res.status(200).json({ 
       success: true, 
-      message: "Test email sent! Check bloocareer680@gmail.com inbox."
+      message: "Test email sent! Check bloocareer@gmail.com inbox."
     });
 
   } catch (error) {
